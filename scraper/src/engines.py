@@ -2,23 +2,39 @@ from abc import ABC, abstractmethod
 import requests
 from bs4 import BeautifulSoup
 from collections import defaultdict
+from src.utils import Utils
+import pandas as pd
+import hashlib
+import time
 
-class Scraper(ABC):
+class Scraper(ABC, Utils):
     def __init__(self):
-        self.results = defaultdict(list)
+        # self.results = defaultdict(list)
+        self.results = []
     
     @property
     @abstractmethod
     def config(self):
         pass
 
+    @property
+    def resultsDataFrame(self):
+        return pd.DataFrame(self.results,
+                            columns=['Id', 'CreateTime', 'ExpirationTime', 'Title', 'SiteId', 'Price', 'InStock'])
+    
+    def saveScrapeResults(self):
+        self.saveResults(self.resultsDataFrame, self.config['siteId'])
+
     def runScrape(self):
+        siteId = self.config['siteId']
+        ts = int(time.time())
+
         for url in self.config['urls']:
             try:
                 soup = self.requestSite(url)
             except:
                 print('fail')
-            self.scrapeData(soup)
+            self.scrapeData(soup, siteId, ts)
 
     def requestSite(self, url):
         page = requests.get(url)
@@ -36,6 +52,7 @@ class CardShopLive(Scraper):
     @property
     def config(self):
         return {
+        'siteId': 'cardshoplive',
         'urls': ['https://cardshoplive.com/collections/pokemon?page=1'],
         'collectionMap': {
             'paradox rift': 'PAR',
@@ -60,10 +77,11 @@ class CardShopLive(Scraper):
         }
     }
 
-    def scrapeData(self, soup):
+    def scrapeData(self, soup, siteId, ts):
         productCards = soup.find_all('div', class_='productCard__card')
         for productCard in productCards:
             title = productCard.find(class_='productCard__title').text.strip().lower()
+            """
             collectionKey = None
             for collection, key in self.config['collectionMap'].items():
                 if collection in title:
@@ -74,9 +92,14 @@ class CardShopLive(Scraper):
                 if packType in title:
                     packCount = count
                     break
+            """
             # remove dollar sign and USD
             price = float(productCard.find(class_='productCard__price').text.strip().split(' ')[0][1:])
             inStock = not productCard.find(class_='productCard__button productCard__button--outOfStock')
+            """
             print(title, collectionKey, packCount, price, inStock)
             if collectionKey and packCount:
                 self.results[collectionKey].append((title, packCount, count, price, inStock))
+            """
+            id = f'{siteId}-{hashlib.md5(title.encode()).hexdigest()}-{str(ts)}'
+            self.results.append([id, ts, ts + 604800, title, siteId, price, inStock])

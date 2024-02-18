@@ -4,22 +4,12 @@
 # remote state only needs to run once
 remote-state
 
-# main infra state
-infra/.terraform
-infra/.terraform.lock.hcl
-
 # ignore vscode directory
 .vscode
 .DS_Store
 
-# ignore pyc files
-*.pyc
-src/*.pyc
 # ignore .env file
 .env
 # ignore dev files
-./src/queue.py
-main_dev.py
-scraper/results
 # ignore pyenv python version file
 .python-version
